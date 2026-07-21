@@ -23,15 +23,44 @@
 
 ## インストール
 
-1. [SwiftBar](https://github.com/swiftbar/SwiftBar) をインストール（`brew install --cask swiftbar`）
-2. `wbgt-tsushima.10m.sh` を SwiftBar のプラグインフォルダに置く
-3. 実行権限を付ける
+ターミナルに以下を貼り付けて実行するだけです。
 
 ```sh
-chmod +x wbgt-tsushima.10m.sh
+brew install --cask swiftbar
+mkdir -p ~/SwiftBarPlugins
+curl -fsSL -o ~/SwiftBarPlugins/wbgt-tsushima.10m.sh \
+  https://raw.githubusercontent.com/Adatchan/wbgt-swiftbar/main/wbgt-tsushima.10m.sh
+chmod +x ~/SwiftBarPlugins/wbgt-tsushima.10m.sh
+open -a SwiftBar
 ```
 
-ファイル名の `10m` が更新間隔です。
+SwiftBar を初めて起動すると**プラグインフォルダを選ぶダイアログ**が出ます。ここで `~/SwiftBarPlugins` を選んでください（`Command + Shift + G` で `~/SwiftBarPlugins` と入力すると早いです）。
+
+数秒でメニューバーに `🟥WBGT 33.2` のような表示が出れば成功です。
+
+<details>
+<summary>Homebrew を使わない場合</summary>
+
+1. [SwiftBar のリリースページ](https://github.com/swiftbar/SwiftBar/releases)から `SwiftBar.zip` をダウンロードして、`SwiftBar.app` を「アプリケーション」フォルダに入れる
+2. このリポジトリの `wbgt-tsushima.10m.sh` を[ダウンロード](https://raw.githubusercontent.com/Adatchan/wbgt-swiftbar/main/wbgt-tsushima.10m.sh)（右クリック →「リンク先のファイルをダウンロード」）
+3. SwiftBar を起動し、プラグインフォルダを指定する
+4. ダウンロードしたファイルをそのフォルダに入れ、ターミナルで実行権限を付ける
+
+```sh
+chmod +x ~/SwiftBarPlugins/wbgt-tsushima.10m.sh
+```
+</details>
+
+### 更新間隔を変えたい場合
+
+ファイル名の `10m` が更新間隔です。ただし**短くしないでください**（理由は[サーバーへの配慮について](#サーバーへの配慮について)）。
+
+### アンインストール
+
+```sh
+rm ~/SwiftBarPlugins/wbgt-tsushima.10m.sh
+rm -rf ~/Library/Caches/wbgt-swiftbar
+```
 
 ## データ提供元
 
