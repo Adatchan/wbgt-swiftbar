@@ -21,11 +21,15 @@ TMP_HDR="$CACHE_DIR/gaitou.hdr.tmp"
 etag=""
 [ -f "$ETAG_FILE" ] && [ -s "$BODY" ] && etag=$(cat "$ETAG_FILE")
 
-code=$(curl -s --max-time 15 -A "$UA" \
+code=$(curl -sf --max-time 15 -A "$UA" \
   ${etag:+-H "If-None-Match: $etag"} \
   -D "$TMP_HDR" -o "$TMP_BODY" -w '%{http_code}' "$URL")
+curl_rc=$?
 
-if [ "$code" = "200" ] && [ -s "$TMP_BODY" ]; then
+# curlが正常終了(=途中切断でない)し、200で本文があり、
+# かつ最終行までWBGT値がそろっている場合だけキャッシュを更新する。
+if [ "$curl_rc" = "0" ] && [ "$code" = "200" ] \
+   && awk -F, 'NF>=5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/{ok=1} END{exit !ok}' "$TMP_BODY" 2>/dev/null; then
   mv -f "$TMP_BODY" "$BODY"
   new_etag=$(grep -i '^etag:' "$TMP_HDR" | tr -d '\r' | sed 's/^[Ee][Tt][Aa][Gg]:[[:space:]]*//')
   if [ -n "$new_etag" ]; then
@@ -37,7 +41,9 @@ fi
 # 304 のときは何もしない(既存キャッシュをそのまま使う)
 rm -f "$TMP_BODY" "$TMP_HDR"
 
-line=$(grep -E '^[0-9]{4}/' "$BODY" 2>/dev/null | tail -1)
+# WBGT(第5列)まで数値がそろった完全な行だけを対象にする。
+# ダウンロードが途中で切れた行(例: 日時だけの行)を拾って誤表示しないため。
+line=$(awk -F, 'NF>=5 && $5 ~ /^[0-9]+(\.[0-9]+)?$/' "$BODY" 2>/dev/null | tail -1)
 
 if [ -z "$line" ]; then
   echo "WBGT --"
