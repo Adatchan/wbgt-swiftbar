@@ -8,12 +8,26 @@
 
 URL="http://isec.cc.okayama-u.ac.jp/wbgt/gaitou.csv"
 PAGE="http://isec.cc.okayama-u.ac.jp/wbgt/wbgtDetail_tsushima.html"
-UA="wbgt-swiftbar/1.2 (+https://github.com/Adatchan/wbgt-swiftbar)"
+UA="wbgt-swiftbar/1.3 (+https://github.com/Adatchan/wbgt-swiftbar)"
 
 CACHE_DIR="$HOME/Library/Caches/wbgt-swiftbar"
 mkdir -p "$CACHE_DIR"
 BODY="$CACHE_DIR/gaitou.csv"
 ETAG_FILE="$CACHE_DIR/gaitou.etag"
+MODE_FILE="$CACHE_DIR/mode"
+
+# --- 表示モード切替: メニューから「$0 set-mode <モード>」として呼ばれる ---
+#   wbgt    … メニューバーにWBGTを表示(既定)
+#   weather … メニューバーに気温・湿度のみを表示
+# 切替時は通信せずに終了する(表示はSwiftBarの refresh=true で更新される)。
+if [ "$1" = "set-mode" ]; then
+  case "$2" in
+    wbgt|weather) printf '%s' "$2" > "$MODE_FILE" ;;
+  esac
+  exit 0
+fi
+mode=$(cat "$MODE_FILE" 2>/dev/null)
+[ "$mode" = "weather" ] || mode="wbgt"
 
 # 一時ファイルはPIDで分ける。10分ごとの自動更新と「今すぐ更新」が同時に
 # 走っても、互いの書きかけのファイルを壊さないようにするため。
@@ -61,11 +75,28 @@ fi
 
 line=$(valid_rows "$BODY" | tail -1)
 
+# 表示モード切替のメニュー項目(選択中のモードにチェックが付く)
+mode_menu() {
+  # SwiftBarが渡すプラグインの絶対パスを優先する(無ければ$0)
+  local self="${SWIFTBAR_PLUGIN_PATH:-$0}"
+  local wbgt_checked=false weather_checked=false
+  [ "$mode" = "wbgt" ] && wbgt_checked=true || weather_checked=true
+  echo "表示モード"
+  echo "WBGTを表示 | bash=\"$self\" param1=set-mode param2=wbgt terminal=false refresh=true checked=$wbgt_checked"
+  echo "気温・湿度のみ表示 | bash=\"$self\" param1=set-mode param2=weather terminal=false refresh=true checked=$weather_checked"
+}
+
 if [ -z "$line" ]; then
-  echo "WBGT --"
+  if [ "$mode" = "weather" ]; then
+    echo "🌡️-- 💧--"
+  else
+    echo "WBGT --"
+  fi
   echo "---"
   echo "データ取得に失敗しました | color=red"
   echo "詳細ページを開く | href=$PAGE"
+  echo "---"
+  mode_menu
   exit 0
 fi
 
@@ -98,7 +129,14 @@ elif [ "$w" -ge 250 ]; then level="警戒(積極的に休憩)"; color="#E6B800";
 elif [ "$w" -ge 210 ]; then level="注意"; color="#2E8B57"; icon="🟩"
 fi
 
-echo "${icon}WBGT ${wbgt}${stale} | color=$color"
+if [ "$mode" = "weather" ]; then
+  # 気温・湿度モードでも、危険(31以上)のときだけは区分アイコンを残す
+  warn=""
+  [ "$w" -ge 310 ] && warn="$icon"
+  echo "${warn}🌡️${temp}℃ 💧${humid}%${stale}"
+else
+  echo "${icon}WBGT ${wbgt}${stale} | color=$color"
+fi
 echo "---"
 echo "津島キャンパス 屋外"
 echo "暑さ指数(WBGT): ${wbgt} ℃ — ${level} | color=$color"
@@ -113,3 +151,5 @@ fi
 echo "---"
 echo "詳細ページを開く | href=$PAGE"
 echo "今すぐ更新 | refresh=true"
+echo "---"
+mode_menu
